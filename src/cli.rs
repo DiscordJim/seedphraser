@@ -6,6 +6,7 @@ pub fn create() -> Command {
     Command::new("seedphraser")
         .version(env!("CARGO_PKG_VERSION"))
         .about("For secret management")
+        .subcommand_required(true)
         .subcommand(Command::new("generate")
             .about("Generates a new seed phrase from entropy.")
             .arg(Arg::new("language")

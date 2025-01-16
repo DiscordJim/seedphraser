@@ -1,7 +1,7 @@
 use std::io::{stdin, IsTerminal, Read, Stdin};
 
 use base64::{prelude::{BASE64_STANDARD, BASE64_URL_SAFE}, Engine};
-use clap::ArgMatches;
+use clap::{error::ErrorKind, ArgMatches};
 use cli::create;
 use error::SeedPhraserError;
 use gen::AdvancedMnemonic;
@@ -92,17 +92,29 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
     Ok(())
 }
 
-pub fn main() -> Result<(), SeedPhraserError> {
 
-    let matches = create().get_matches();
+pub fn run() -> Result<(), SeedPhraserError> {
+    let command = create();
+    let matches = command.get_matches();
+
     match matches.subcommand() {
         Some(("generate", sub_matches)) => generate(sub_matches)?,
         Some(("decode", sub_matches)) => match sub_matches.get_one::<String>("phrase") {
             Some(phrase) => decode_sequence_direct(phrase, sub_matches)?,
             None => decode_sequence(sub_matches)?
         },
-        None => (),
-        _ => (),
+        _ => Err(SeedPhraserError::NoArgumentSpecified)?
     }
     Ok(())
+}
+
+pub fn main() {
+    match run() {
+        Ok(()) => (),
+        Err(e) => {
+            // 
+            let err = clap::Error::raw(ErrorKind::ValueValidation, format!("{e}")).format(&mut create());
+            err.exit();
+        }
+    }
 }
