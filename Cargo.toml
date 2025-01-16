@@ -1,9 +1,10 @@
 [package]
 name = "seedphraser"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "BIP39 secret phrase generator"
+repository = "https://github.com/DiscordJim/seedphraser"
 
 [dependencies]
 base64 = "0.22.1"
