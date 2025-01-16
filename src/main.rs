@@ -1,11 +1,10 @@
-use std::{io::{stdin, Read}, num::ParseIntError, str::Utf8Error};
+use std::io::{stdin, IsTerminal, Read, Stdin};
 
-use base64::{prelude::BASE64_STANDARD, DecodeError, Engine};
+use base64::{prelude::{BASE64_STANDARD, BASE64_URL_SAFE}, Engine};
 use clap::ArgMatches;
 use cli::create;
 use error::SeedPhraserError;
 use gen::AdvancedMnemonic;
-use hex::FromHexError;
 use lang::{LanguageTool, IoFormat};
 
 pub mod cli;
@@ -14,6 +13,7 @@ pub mod gen;
 pub mod error;
 
 
+/// Generates a new sequence.
 pub fn generate(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
     let language = LanguageTool::parse(sub_matches)?;
     let bits = sub_matches
@@ -21,15 +21,18 @@ pub fn generate(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
         .map(|f| str::parse::<usize>(f))
         .expect("Required argument.")?;
     let output = IoFormat::parse("output", sub_matches)?;
+    let should_pad = !sub_matches.get_one::<String>("nopad").is_some();
 
-    AdvancedMnemonic::generate(bits, language, true)?.output(output)?;
-
- 
+    AdvancedMnemonic::generate(bits, language, should_pad)?.output(output)?;
     Ok(())
 }
 
-
+/// Reads all the available stdin, terminating the stream
+/// if none is available.
 fn read_all_stdin() -> Result<Vec<u8>, SeedPhraserError> {
+    if Stdin::is_terminal(&stdin()) {
+        Err(SeedPhraserError::StdinIsTerminal)?;
+    }
     let mut total = Vec::new();
     let mut buf = [0u8; 256];
     loop {
@@ -57,6 +60,8 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
     let language = LanguageTool::parse(sub_matches)?;
     let input = IoFormat::parse("input", sub_matches)?;
     let output = IoFormat::parse("output", sub_matches)?;
+    let should_pad = !sub_matches.get_one::<String>("nopad").is_some();
+
 
 
     let buf = read_all_stdin()?;
@@ -64,20 +69,17 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
 
     let entropy = match input {
         IoFormat::Text => {
-            let data = std::str::from_utf8(&buffer)?;
-            // println!("Data: {:?}", data);
-            let mnec = AdvancedMnemonic::from_phrase(data, language)?;
-            mnec.output(output)?;
+            AdvancedMnemonic::from_phrase(std::str::from_utf8(&buffer)?, language)?.output(output)?;
             return Ok(())
         },
         IoFormat::Base64 => BASE64_STANDARD.decode(buffer)?,
-        IoFormat::Base64UrlSafe => BASE64_STANDARD.decode(buffer)?,
+        IoFormat::Base64UrlSafe => BASE64_URL_SAFE.decode(buffer)?,
         IoFormat::Binary => buffer.to_vec(),
         IoFormat::Hex => hex::decode(buffer)?
     };
 
-    AdvancedMnemonic::from_entropy(&entropy, language, true)?.output(output)?;
-    // output.output(Mnemonic::from_entropy(&entropy, language)?)?;
+
+    AdvancedMnemonic::from_entropy(&entropy, language, should_pad)?.output(output)?;
     Ok(())
 }
 

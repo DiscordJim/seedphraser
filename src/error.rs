@@ -16,7 +16,8 @@ pub enum SeedPhraserError {
     HexDecodeError(hex::FromHexError),
     ZeroBitMnemonic,
     BitsNotDivisibleByEight,
-    BadSequenceLength
+    BadSequenceLength,
+    StdinIsTerminal
 }
 
 impl From<FromHexError> for SeedPhraserError {
