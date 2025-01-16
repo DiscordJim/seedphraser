@@ -1,48 +1,18 @@
-use std::{io::{stdin, stdout, BufRead, Read, Write}, num::ParseIntError, str::Utf8Error};
+use std::{io::{stdin, Read}, num::ParseIntError, str::Utf8Error};
 
-use base64::{prelude::{BASE64_STANDARD, BASE64_URL_SAFE}, Engine};
-use bip39::{Mnemonic, MnemonicType};
+use base64::{prelude::BASE64_STANDARD, DecodeError, Engine};
 use clap::ArgMatches;
 use cli::create;
-use lang::{LanguageTool, OutputFormat};
+use error::SeedPhraserError;
+use gen::AdvancedMnemonic;
+use hex::FromHexError;
+use lang::{LanguageTool, IoFormat};
 
 pub mod cli;
 pub mod lang;
+pub mod gen;
+pub mod error;
 
-#[derive(Debug)]
-pub enum SeedPhraserError {
-    MissingArgument(String),
-    FailedParsingArguments(String),
-    UnrecognizableLanguage(String),
-    FailedGeneratingMnemonic(String),
-    FailedToReadOutputFormat(String),
-    IOError(std::io::Error),
-    Utf8Error(std::str::Utf8Error)
-}
-
-impl From<Utf8Error> for SeedPhraserError {
-    fn from(value: Utf8Error) -> Self {
-        Self::Utf8Error(value)
-    }
-}
-
-impl From<ParseIntError> for SeedPhraserError {
-    fn from(value: ParseIntError) -> Self {
-        Self::FailedParsingArguments(value.to_string())
-    }
-}
-
-impl From<bip39::ErrorKind> for SeedPhraserError {
-    fn from(value: bip39::ErrorKind) -> Self {
-        Self::FailedGeneratingMnemonic(value.to_string())
-    }
-}
-
-impl From<std::io::Error> for SeedPhraserError {
-    fn from(value: std::io::Error) -> Self {
-        Self::IOError(value)
-    }
-}
 
 pub fn generate(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
     let language = LanguageTool::parse(sub_matches)?;
@@ -50,11 +20,11 @@ pub fn generate(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
         .get_one::<String>("bits")
         .map(|f| str::parse::<usize>(f))
         .expect("Required argument.")?;
-    let output = OutputFormat::parse("output", sub_matches)?;
+    let output = IoFormat::parse("output", sub_matches)?;
 
-    let mnemonic = Mnemonic::new(MnemonicType::for_key_size(bits)?, language);
-    output.output(mnemonic)?;
-    
+    AdvancedMnemonic::generate(bits, language, true)?.output(output)?;
+
+ 
     Ok(())
 }
 
@@ -62,9 +32,8 @@ pub fn generate(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
 fn read_all_stdin() -> Result<Vec<u8>, SeedPhraserError> {
     let mut total = Vec::new();
     let mut buf = [0u8; 256];
-    let mut pos = 0;
     loop {
-        pos = stdin().read(&mut buf)?;
+        let pos = stdin().read(&mut buf)?;
         if pos == 0 {
             break
         }
@@ -73,20 +42,42 @@ fn read_all_stdin() -> Result<Vec<u8>, SeedPhraserError> {
     Ok(total)
 }
 
+pub fn decode_sequence_direct(
+    phrase: &String,
+    sub_matches: &ArgMatches
+) -> Result<(), SeedPhraserError> {
+    let language = LanguageTool::parse(sub_matches)?;
+    let output = IoFormat::parse("output", sub_matches)?;
+
+    AdvancedMnemonic::from_phrase(phrase.trim(), language)?.output(output)?;
+    Ok(())
+}
+
 pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
     let language = LanguageTool::parse(sub_matches)?;
-    let input = OutputFormat::parse("input", sub_matches)?;
-    let output = OutputFormat::parse("output", sub_matches)?;
+    let input = IoFormat::parse("input", sub_matches)?;
+    let output = IoFormat::parse("output", sub_matches)?;
 
-    println!("Input: {input:?}, Output: {output:?}");
 
-    match input {
-        OutputFormat::Text => {
-            let data = std::str::from_utf8(&read_all_stdin()?)?;
+    let buf = read_all_stdin()?;
+    let buffer = &buf[..buf.len() - 2];
+
+    let entropy = match input {
+        IoFormat::Text => {
+            let data = std::str::from_utf8(&buffer)?;
+            // println!("Data: {:?}", data);
+            let mnec = AdvancedMnemonic::from_phrase(data, language)?;
+            mnec.output(output)?;
+            return Ok(())
         },
-        _ => unreachable!()
-    }
+        IoFormat::Base64 => BASE64_STANDARD.decode(buffer)?,
+        IoFormat::Base64UrlSafe => BASE64_STANDARD.decode(buffer)?,
+        IoFormat::Binary => buffer.to_vec(),
+        IoFormat::Hex => hex::decode(buffer)?
+    };
 
+    AdvancedMnemonic::from_entropy(&entropy, language, true)?.output(output)?;
+    // output.output(Mnemonic::from_entropy(&entropy, language)?)?;
     Ok(())
 }
 
@@ -94,7 +85,10 @@ pub fn main() -> Result<(), SeedPhraserError> {
     let matches = create().get_matches();
     match matches.subcommand() {
         Some(("generate", sub_matches)) => generate(sub_matches)?,
-        Some(("decode", sub_matches)) => decode_sequence(sub_matches)?,
+        Some(("decode", sub_matches)) => match sub_matches.get_one::<String>("phrase") {
+            Some(phrase) => decode_sequence_direct(phrase, sub_matches)?,
+            None => decode_sequence(sub_matches)?
+        },
         None => (),
         _ => (),
     }

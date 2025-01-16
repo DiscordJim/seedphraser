@@ -2,12 +2,14 @@ use std::io::{stdout, Write};
 
 use base64::{prelude::{BASE64_STANDARD, BASE64_URL_SAFE}, Engine};
 use bip39::{Language, Mnemonic};
-use clap::{Arg, ArgMatches};
+use clap::ArgMatches;
 
-use crate::SeedPhraserError;
+use crate::error::SeedPhraserError;
+
+
 
 #[derive(Debug)]
-pub enum OutputFormat {
+pub enum IoFormat {
     Text,
     Binary,
     Base64,
@@ -15,7 +17,13 @@ pub enum OutputFormat {
     Hex
 }
 
-impl OutputFormat {
+impl IoFormat {
+    pub fn is_text(&self) -> bool {
+        match self {
+            IoFormat::Text => true,
+            _ => false
+        }
+    }
     pub fn parse(name: &str, args: &ArgMatches) -> Result<Self, SeedPhraserError> {
         let value = args.get_one::<String>(name)
             .expect("This is always a required argument.");
@@ -23,20 +31,20 @@ impl OutputFormat {
     }
     pub fn output(&self, mnemonic: Mnemonic) -> Result<(), SeedPhraserError> {
         match self {
-            OutputFormat::Text => print!("{}", mnemonic.into_phrase()),
-            OutputFormat::Binary => {
+            IoFormat::Text => print!("{}", mnemonic.into_phrase()),
+            IoFormat::Binary => {
                 stdout().write_all(mnemonic.entropy())?;
                 stdout().flush()?;
             },
-            OutputFormat::Base64 => print!("{}", BASE64_STANDARD.encode(mnemonic.entropy())),
-            OutputFormat::Base64UrlSafe => print!("{}", BASE64_URL_SAFE.encode(mnemonic.entropy())),
-            OutputFormat::Hex => print!("{}", hex::encode(mnemonic.entropy()))
+            IoFormat::Base64 => print!("{}", BASE64_STANDARD.encode(mnemonic.entropy())),
+            IoFormat::Base64UrlSafe => print!("{}", BASE64_URL_SAFE.encode(mnemonic.entropy())),
+            IoFormat::Hex => print!("{}", hex::encode(mnemonic.entropy()))
         }
         Ok(())
     }
 }
 
-impl TryFrom<&str> for OutputFormat {
+impl TryFrom<&str> for IoFormat {
     type Error = SeedPhraserError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
