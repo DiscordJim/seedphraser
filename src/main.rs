@@ -34,6 +34,8 @@ fn read_all_stdin() -> Result<Vec<u8>, SeedPhraserError> {
     if Stdin::is_terminal(&stdin()) {
         Err(SeedPhraserError::StdinIsTerminal)?;
     }
+
+    // Read until we are out of bytes.
     let mut total = Vec::new();
     let mut buf = [0u8; 256];
     loop {
@@ -46,6 +48,8 @@ fn read_all_stdin() -> Result<Vec<u8>, SeedPhraserError> {
     Ok(total)
 }
 
+/// This handles the case where the phrase is passed in directly instead
+/// of being read from STDIN.
 pub fn decode_sequence_direct(
     phrase: &String,
     sub_matches: &ArgMatches
@@ -53,10 +57,12 @@ pub fn decode_sequence_direct(
     let language = LanguageTool::parse(sub_matches)?;
     let output = IoFormat::parse("output", sub_matches)?;
 
+    // Parse a mnemonic phrase.
     AdvancedMnemonic::from_phrase(phrase.trim(), language)?.output(output)?;
     Ok(())
 }
 
+/// Decode a sequence.
 pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
     let language = LanguageTool::parse(sub_matches)?;
     let input = IoFormat::parse("input", sub_matches)?;
@@ -65,9 +71,11 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
 
 
 
+    // Read the stdin.
     let buf = read_all_stdin()?;
     let buffer = &buf[..buf.len() - 2];
 
+    // Read the input.
     let entropy = match input {
         IoFormat::Text => {
             AdvancedMnemonic::from_phrase(std::str::from_utf8(&buffer)?, language)?.output(output)?;
@@ -79,7 +87,7 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
         IoFormat::Hex => hex::decode(buffer)?
     };
 
-
+    // if we are reading in byte type data.
     AdvancedMnemonic::from_entropy(&entropy, language, should_pad)?.output(output)?;
     Ok(())
 }

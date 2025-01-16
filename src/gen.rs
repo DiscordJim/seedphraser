@@ -116,10 +116,6 @@ impl AdvancedMnemonic {
         // println!("Buffer: {:?}", buffer.len());
         buffer.append(&mut vec![0u8; repad / 8]);
 
-        
-       
-
-
         let mut generators = vec![];
 
         // Now let us form the sequence
@@ -132,8 +128,6 @@ impl AdvancedMnemonic {
                 cursor += 32;
             }
         }
-
-
         
         Ok(Self {
             generators,
@@ -154,9 +148,6 @@ impl AdvancedMnemonic {
             },
             None => 0
         };
-
-        
-
 
         // Calculate how many words are contained within the phrase.
         let word_count = text.split(' ').count();
@@ -190,6 +181,8 @@ impl AdvancedMnemonic {
             print!("{}", self.to_string())
         } else {
             match format {
+                // Here text is unreachable as we have handled it in the first
+                // branch of the if statement.
                 IoFormat::Text => unreachable!(),
                 IoFormat::Base64 => print!("{}", BASE64_STANDARD.encode(self.to_vec())),
                 IoFormat::Base64UrlSafe => print!("{}", BASE64_URL_SAFE.encode(self.to_vec())),
@@ -210,12 +203,14 @@ impl AdvancedMnemonic {
         let total = self.generators.len();
         let mut buffer = String::new();
         for (index, m) in self.generators.into_iter().enumerate() {
+            // push the mnemonic phrases on to the buffer
             buffer.push_str(&m.into_phrase());
             if index != total - 1 {
                 buffer.push(' ');
             }
         }
         if self.padding && self.trim != 0 {
+            // push the trim inicator on the end
             buffer.push_str(&format!(" @{}", self.trim / 8));
         }
         buffer
@@ -223,11 +218,12 @@ impl AdvancedMnemonic {
     pub fn to_vec(self) -> Vec<u8> {
         let mut buffer = Vec::new();
         for m in &self.generators {
+            // Extend the buffer as we convert the mnemonics
+            // to their respective seed phrases.
             buffer.extend_from_slice(m.entropy());
         }
         if self.padding {
             // Trim the mnemonic to the padding length.
-            // println!("{} {}", self.trim, self.padding);
             buffer.drain(buffer.len() - (self.trim / 8)..);
         }
         buffer
