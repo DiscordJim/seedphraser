@@ -4,14 +4,16 @@ use base64::{prelude::{BASE64_STANDARD, BASE64_URL_SAFE}, Engine};
 use bip39::{Language, Mnemonic, MnemonicType};
 use once_cell::sync::Lazy;
 use regex::Regex;
-
 use crate::{error::SeedPhraserError, lang::IoFormat};
 
 
 #[derive(Clone)]
 pub struct AdvancedMnemonic {
+    /// The [Mnemonic] class will automatically zeroize itself on drop.
     generators: Vec<Mnemonic>,
+    /// The amount of bits that should be trimmed off here.
     trim: usize,
+    /// If this is using padding.
     padding: bool
 }
 
@@ -136,9 +138,10 @@ impl AdvancedMnemonic {
         })
     }
     pub fn from_phrase(text: &str, lang: Language) -> Result<Self, SeedPhraserError> {
-        let mut text = text.trim();
         static TRIM_EXTRACTOR: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?<main>.*) @(?<trim>[0-9]*)").unwrap());
 
+        let mut text = text.trim();
+        
 
         // Check if there is a trim on the sequence.
         let trim = match TRIM_EXTRACTOR.captures(text) {
@@ -178,17 +181,17 @@ impl AdvancedMnemonic {
     /// formatting specified.
     pub fn output(self, format: IoFormat) -> Result<(), SeedPhraserError> {
         if format.is_text() {
-            print!("{}", self.to_string())
+            print!("{}", self.into_string())
         } else {
             match format {
                 // Here text is unreachable as we have handled it in the first
                 // branch of the if statement.
                 IoFormat::Text => unreachable!(),
-                IoFormat::Base64 => print!("{}", BASE64_STANDARD.encode(self.to_vec())),
-                IoFormat::Base64UrlSafe => print!("{}", BASE64_URL_SAFE.encode(self.to_vec())),
-                IoFormat::Hex => print!("{}", hex::encode(self.to_vec())),
+                IoFormat::Base64 => print!("{}", BASE64_STANDARD.encode(self.into_vec())),
+                IoFormat::Base64UrlSafe => print!("{}", BASE64_URL_SAFE.encode(self.into_vec())),
+                IoFormat::Hex => print!("{}", hex::encode(self.into_vec())),
                 IoFormat::Binary => {
-                    stdout().write_all(&self.to_vec())?;
+                    stdout().write_all(&self.into_vec())?;
                     stdout().flush()?;
                 } 
             }
@@ -199,7 +202,7 @@ impl AdvancedMnemonic {
     /// 
     /// If it is a long mnenomic that has padding,
     /// this will include the padding amount.
-    pub fn to_string(self) -> String {
+    pub fn into_string(self) -> String {
         let total = self.generators.len();
         let mut buffer = String::new();
         for (index, m) in self.generators.into_iter().enumerate() {
@@ -215,7 +218,7 @@ impl AdvancedMnemonic {
         }
         buffer
     }
-    pub fn to_vec(self) -> Vec<u8> {
+    pub fn into_vec(self) -> Vec<u8> {
         let mut buffer = Vec::new();
         for m in &self.generators {
             // Extend the buffer as we convert the mnemonics
@@ -242,14 +245,14 @@ mod tests {
     pub fn normal_size_sequence_without_padding() {
         for bits in [128, 160, 192, 224, 256, 512, 1024, 2048] {
             let original = AdvancedMnemonic::generate(bits, Language::English, false).unwrap();
-            let o_bytes = original.clone().to_vec();
-            let o_string = original.clone().to_string();
+            let o_bytes = original.clone().into_vec();
+            let o_string = original.clone().into_string();
     
             let from_phrase = AdvancedMnemonic::from_phrase(&o_string, Language::English).unwrap();
-            assert_eq!(o_bytes, from_phrase.to_vec());
+            assert_eq!(o_bytes, from_phrase.into_vec());
 
             let from_entropy = AdvancedMnemonic::from_entropy(&o_bytes, Language::English, false).unwrap();
-            assert_eq!(o_bytes, from_entropy.to_vec());
+            assert_eq!(o_bytes, from_entropy.into_vec());
         }
     }
 
@@ -257,15 +260,15 @@ mod tests {
     pub fn normal_size_sequence_with_padding() {
         for bits in 1..128 {
             let original = AdvancedMnemonic::generate(bits * 8, Language::English, true).unwrap();
-            let o_bytes = original.clone().to_vec();
-            let o_string = original.clone().to_string();
+            let o_bytes = original.clone().into_vec();
+            let o_string = original.clone().into_string();
 
             let from_phrase = AdvancedMnemonic::from_phrase(&o_string, Language::English).unwrap();
-            assert_eq!(o_bytes, from_phrase.to_vec());
+            assert_eq!(o_bytes, from_phrase.into_vec());
 
       
             let from_entropy = AdvancedMnemonic::from_entropy(&o_bytes, Language::English, true).unwrap();
-            assert_eq!(o_bytes, from_entropy.to_vec());
+            assert_eq!(o_bytes, from_entropy.into_vec());
         }
     }
 }

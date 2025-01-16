@@ -21,10 +21,7 @@ impl IoFormat {
     /// If the formatting to be used is just
     /// the seed phrase or not.
     pub fn is_text(&self) -> bool {
-        match self {
-            IoFormat::Text => true,
-            _ => false
-        }
+        matches!(self, IoFormat::Text)
     }
     /// Parses an [IoFormat] from text.
     pub fn parse(name: &str, args: &ArgMatches) -> Result<Self, SeedPhraserError> {
@@ -69,9 +66,9 @@ pub struct LanguageTool;
 impl LanguageTool {
     /// Parses out the [Language] from the arguments.
     pub fn parse(args: &ArgMatches) -> Result<Language, SeedPhraserError> {
-        Ok(Self::lookup(args
+        Self::lookup(args
             .get_one::<String>("language")
-            .expect("This has a default option, should not fail here."))?)
+            .expect("This has a default option, should not fail here."))
     }
     /// Looks up the code from a string and returns a [Language].
     pub fn lookup(code: &str) -> Result<Language, SeedPhraserError> {

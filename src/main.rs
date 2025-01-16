@@ -21,7 +21,7 @@ pub fn generate(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
         .map(|f| str::parse::<usize>(f))
         .expect("Required argument.")?;
     let output = IoFormat::parse("output", sub_matches)?;
-    let should_pad = !sub_matches.get_one::<String>("nopad").is_some();
+    let should_pad = sub_matches.get_one::<String>("nopad").is_none();
 
     // Generate a new mnemonic.
     AdvancedMnemonic::generate(bits, language, should_pad)?.output(output)?;
@@ -51,7 +51,7 @@ fn read_all_stdin() -> Result<Vec<u8>, SeedPhraserError> {
 /// This handles the case where the phrase is passed in directly instead
 /// of being read from STDIN.
 pub fn decode_sequence_direct(
-    phrase: &String,
+    phrase: &str,
     sub_matches: &ArgMatches
 ) -> Result<(), SeedPhraserError> {
     let language = LanguageTool::parse(sub_matches)?;
@@ -67,7 +67,7 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
     let language = LanguageTool::parse(sub_matches)?;
     let input = IoFormat::parse("input", sub_matches)?;
     let output = IoFormat::parse("output", sub_matches)?;
-    let should_pad = !sub_matches.get_one::<String>("nopad").is_some();
+    let should_pad = sub_matches.get_one::<String>("nopad").is_none();
 
 
 
@@ -78,7 +78,7 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
     // Read the input.
     let entropy = match input {
         IoFormat::Text => {
-            AdvancedMnemonic::from_phrase(std::str::from_utf8(&buffer)?, language)?.output(output)?;
+            AdvancedMnemonic::from_phrase(std::str::from_utf8(buffer)?, language)?.output(output)?;
             return Ok(())
         },
         IoFormat::Base64 => BASE64_STANDARD.decode(buffer)?,
