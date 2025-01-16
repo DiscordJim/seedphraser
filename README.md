@@ -1,6 +1,13 @@
 # seedphraser
 Read and writes BIP39 seed phrases. This also supports an extended version on top of the 128-bit, 160-bit, 192-bit, 224-bit and 256-bit forms. There is also long sequence support.
 
+## Installing
+```bash
+$ cargo install seedphraser
+$ seedphraser --help
+```
+Alternatively, you may download a release from the release tab on GitHub.
+
 ## Long Sequences
 A long sequence is a sequence that exceeds 256-bit. It will be padded with 256-bit chunks for simplicity. If here is an amount that is not divisible by 256-bits, then padding will be used and a ` @ <trim>` will be appended onto the end which tells the program how many bytes to trim off the end. For instance consider,
 ```
