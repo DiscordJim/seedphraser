@@ -6,7 +6,11 @@ Read and writes BIP39 seed phrases. This also supports an extended version on to
 $ cargo install seedphraser
 $ seedphraser --help
 ```
-Alternatively, you may download a release from the release tab on GitHub.
+Alternatively, you may download a release from the release tab on GitHub. For example on Linux,
+```bash
+$ wget https://github.com/DiscordJim/seedphraser/releases/download/release/x86_64-unknown-linux-gnu
+$ mv x86_64-unknown-linux-gnu seedphraser && chmod +x seedphraser
+```
 
 ## Long Sequences
 A long sequence is a sequence that exceeds 256-bit. It will be padded with 256-bit chunks for simplicity. If here is an amount that is not divisible by 256-bits, then padding will be used and a ` @ <trim>` will be appended onto the end which tells the program how many bytes to trim off the end. For instance consider,
