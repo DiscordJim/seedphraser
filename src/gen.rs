@@ -227,7 +227,7 @@ impl AdvancedMnemonic {
         }
         if self.padding {
             // Trim the mnemonic to the padding length.
-            println!("{} {}", self.trim, self.padding);
+            // println!("{} {}", self.trim, self.padding);
             buffer.drain(buffer.len() - (self.trim / 8)..);
         }
         buffer

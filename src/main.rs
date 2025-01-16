@@ -23,6 +23,7 @@ pub fn generate(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError> {
     let output = IoFormat::parse("output", sub_matches)?;
     let should_pad = !sub_matches.get_one::<String>("nopad").is_some();
 
+    // Generate a new mnemonic.
     AdvancedMnemonic::generate(bits, language, should_pad)?.output(output)?;
     Ok(())
 }
@@ -84,6 +85,7 @@ pub fn decode_sequence(sub_matches: &ArgMatches) -> Result<(), SeedPhraserError>
 }
 
 pub fn main() -> Result<(), SeedPhraserError> {
+
     let matches = create().get_matches();
     match matches.subcommand() {
         Some(("generate", sub_matches)) => generate(sub_matches)?,

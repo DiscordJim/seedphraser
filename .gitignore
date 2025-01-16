@@ -23,3 +23,8 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+
+*.bin
+*.b64
+*.hex
